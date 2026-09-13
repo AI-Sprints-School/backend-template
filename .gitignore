@@ -1,0 +1,19 @@
+.gradle/
+.kotlin/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.idea/
+*.iml
+out/
+.vscode/
+.DS_Store
+.env
+.env.*
+!env.example
+logs/
+*.log
+# журнал урока 12 курса корутин — часть шаблона
+!coroutines/data/service.log
+uploads/
+docker-compose.override.yml
+# reports/ не игнорируется: отчёт прогона коммитится в pull request

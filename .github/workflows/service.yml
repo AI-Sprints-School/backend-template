@@ -1,0 +1,72 @@
+# CI сервиса (service/) — готовый, править не нужно.
+# 1. Находит последний закоммиченный отчёт service/reports/tests-NN.txt.
+# 2. Прогоняет тесты и перегенерирует отчёт той же главы.
+# 3. Падает, если отчёт в PR не совпадает с прогоном в CI.
+# 4. Падает, если красный хотя бы один тест ядра глав 1–N.
+# Модуль корутин (coroutines/**) проверяется своим workflow — сюда его изменения не попадают.
+name: service
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["coroutines/**"]
+  pull_request:
+    paths-ignore: ["coroutines/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Глава последнего отчёта
+        id: chapter
+        run: |
+          last=$(ls service/reports/tests-*.txt 2>/dev/null | sort | tail -1 || true)
+          if [ -z "$last" ]; then
+            echo "chapter=" >> "$GITHUB_OUTPUT"
+            echo "Отчётов прогона нет — только тесты"
+          else
+            n=$(basename "$last" .txt); n=${n#tests-}
+            echo "chapter=$((10#$n))" >> "$GITHUB_OUTPUT"
+            echo "Последний отчёт: $last"
+          fi
+
+      # Docker на ubuntu-latest есть — тесты с базой поднимают PostgreSQL через Testcontainers
+      # На main шаблона тесты красные по замыслу: сборка и прогон проходят, красные тесты
+      # не валят workflow. В pull request без отчёта — красный: отчёт главы обязателен.
+      - name: Тесты (отчёта ещё нет)
+        if: steps.chapter.outputs.chapter == ''
+        continue-on-error: ${{ github.event_name == 'push' }}
+        run: ./gradlew :service:test -PjavaToolchain=25 --continue
+
+      - name: Прогон и отчёт главы ${{ steps.chapter.outputs.chapter }}
+        if: steps.chapter.outputs.chapter != ''
+        run: ./gradlew :service:testReport -Pchapter=${{ steps.chapter.outputs.chapter }} -PjavaToolchain=25
+
+      - name: Отчёт в PR совпадает с прогоном CI
+        if: steps.chapter.outputs.chapter != ''
+        run: |
+          if ! git diff --exit-code -- service/reports/; then
+            echo "::error::Закоммиченный отчёт не совпадает с прогоном в CI. Перегенерируйте: ./gradlew :service:testReport -Pchapter=${{ steps.chapter.outputs.chapter }}"
+            exit 1
+          fi
+
+      - name: Ядро глав 1–${{ steps.chapter.outputs.chapter }} зелёное
+        if: steps.chapter.outputs.chapter != ''
+        run: ./gradlew :service:testReport -Pchapter=${{ steps.chapter.outputs.chapter }} -PfailOnCore=true -PjavaToolchain=25
+
+      - name: HTML-отчёт тестов
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-report
+          path: service/build/reports/tests/test

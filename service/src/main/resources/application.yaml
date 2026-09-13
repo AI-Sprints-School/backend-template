@@ -1,0 +1,39 @@
+ktor:
+  deployment:
+    host: "$SERVER_HOST:0.0.0.0"
+    port: "$SERVER_PORT:8080"
+  application:
+    modules:
+      - com.learning.ApplicationKt.module
+
+database:
+  url: "$DATABASE_URL:jdbc:postgresql://localhost:5432/learning_platform"
+  user: "$DATABASE_USER:postgres"
+  password: "$DATABASE_PASSWORD:postgres_password"
+  maxPoolSize: "$DATABASE_MAX_POOL_SIZE:10"
+  # Учебные данные из db/seed — только для локального стенда
+  seed: "$DATABASE_SEED:false"
+
+jwt:
+  secret: "$JWT_SECRET:your-256-bit-secret-key-change-in-production-please-make-it-long-enough"
+  issuer: "$JWT_ISSUER:backend-starter-course"
+  audience: "$JWT_AUDIENCE:backend-starter-course-users"
+  realm: "$JWT_REALM:Backend Starter Course"
+  # секунды
+  accessTokenExpiration: "$JWT_ACCESS_TOKEN_EXPIRATION:3600"
+  refreshTokenExpiration: "$JWT_REFRESH_TOKEN_EXPIRATION:604800"
+
+admin:
+  # Почта пользователя, которому при старте выдаётся роль admin (пусто — никому)
+  email: "$ADMIN_EMAIL:"
+
+rateLimit:
+  # запросов в минуту
+  auth: "$RATE_LIMIT_AUTH:5"
+  api: "$RATE_LIMIT_API:100"
+
+redis:
+  enabled: "$REDIS_ENABLED:true"
+
+jobs:
+  enabled: "$JOBS_ENABLED:true"

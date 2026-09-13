@@ -1,0 +1,69 @@
+# CI модуля курса корутин (coroutines/) — готовый, править не нужно.
+# 1. Номер урока берёт из имени ветки lesson-NN.
+# 2. Прогоняет тесты урока и перегенерирует coroutines/reports/tests-NN.txt.
+# 3. Падает, если закоммиченный отчёт не совпадает с прогоном в CI.
+# 4. Падает, если в отчёте есть красные тесты.
+# Сервис (service/) проверяется своим workflow — сюда его изменения не попадают.
+name: coroutines
+
+on:
+  pull_request:
+    paths: ["coroutines/**"]
+
+jobs:
+  lesson:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Номер урока из имени ветки
+        id: lesson
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if [[ "$BRANCH" =~ ^lesson-([0-9]{2})$ ]]; then
+            echo "number=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "Урок ${BASH_REMATCH[1]}"
+          else
+            echo "::error::ветка должна называться lesson-NN, например lesson-01 (сейчас: $BRANCH)"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Тесты и отчёт урока ${{ steps.lesson.outputs.number }}
+        run: ./gradlew :coroutines:testReport -Plesson=${{ steps.lesson.outputs.number }}
+
+      - name: Отчёт в PR совпадает с прогоном CI
+        run: |
+          report=coroutines/reports/tests-${{ steps.lesson.outputs.number }}.txt
+          if ! git diff --exit-code -- "$report"; then
+            echo "::error::Закоммиченный $report не совпадает с прогоном в CI (или его нет в ветке). Перегенерируйте: gradle :coroutines:testReport -Plesson=${{ steps.lesson.outputs.number }}"
+            exit 1
+          fi
+          if [ -n "$(git ls-files --others --exclude-standard -- "$report")" ]; then
+            echo "::error::Отчёта $report нет в pull request. Запустите testReport и закоммитьте файл."
+            exit 1
+          fi
+
+      - name: Красных тестов нет
+        run: |
+          report=coroutines/reports/tests-${{ steps.lesson.outputs.number }}.txt
+          cat "$report"
+          if ! grep -q "^Выполнено [0-9]*, зелёных [0-9]*, красных 0$" "$report"; then
+            echo "::error::В $report есть красные тесты — урок не сдан"
+            exit 1
+          fi
+
+      - name: HTML-отчёт тестов
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: coroutines-test-report
+          path: coroutines/build/reports/tests/test

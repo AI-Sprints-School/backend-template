@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: backend_postgres
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-learning_platform}
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      # PostgreSQL 18: данные в /var/lib/postgresql/18/docker, том монтируется на уровень выше
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: backend_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ..
+      dockerfile: service/Dockerfile
+    container_name: backend_app
+    ports:
+      - "8080:8080"
+    environment:
+      # Схему создаёт приложение миграциями Flyway при старте
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${DATABASE_NAME:-learning_platform}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres_password}
+      DATABASE_SEED: ${DATABASE_SEED:-true}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-change_this_secret_key_in_production_to_random_string}
+      JWT_ISSUER: ${JWT_ISSUER:-backend-starter-course}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-backend-starter-course-users}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION:-3600}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION:-604800}
+      FILE_STORAGE_PATH: /app/uploads
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
