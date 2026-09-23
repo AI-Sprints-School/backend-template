@@ -7,6 +7,7 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
+import java.security.MessageDigest
 import java.time.Instant
 import java.util.*
 
@@ -144,6 +145,11 @@ class TokenRepository {
     }
 
     // ==================== Refresh Tokens ====================
+    //
+    // В базе лежит не сам refresh-токен, а его SHA-256 (64 hex-символа в столбце token):
+    // утечка дампа таблицы не даёт готовых сессий. Токен длинный и случайный, поэтому
+    // соль и медленный хеш, как у пароля, не нужны; поиск идёт по хешу через уникальный
+    // индекс столбца token (V2). Снаружи функции по-прежнему принимают токен как есть.
 
     fun createRefreshToken(userId: UUID, token: String, expiresAt: Instant): Boolean {
         return try {
@@ -151,7 +157,7 @@ class TokenRepository {
                 RefreshTokens.insert {
                     it[id] = UUID.randomUUID()
                     it[RefreshTokens.userId] = userId
-                    it[RefreshTokens.token] = token
+                    it[RefreshTokens.token] = hashToken(token)
                     it[RefreshTokens.expiresAt] = expiresAt
                 }
             }
@@ -167,7 +173,7 @@ class TokenRepository {
             transaction {
                 RefreshTokens
                     .selectAll().where { 
-                        (RefreshTokens.token eq token) and 
+                        (RefreshTokens.token eq hashToken(token)) and 
                         (RefreshTokens.expiresAt greater Instant.now()) and
                         (RefreshTokens.isRevoked eq false)
                     }
@@ -183,7 +189,7 @@ class TokenRepository {
     fun revokeRefreshToken(token: String): Boolean {
         return try {
             transaction {
-                RefreshTokens.update({ RefreshTokens.token eq token }) {
+                RefreshTokens.update({ RefreshTokens.token eq hashToken(token) }) {
                     it[isRevoked] = true
                 } > 0
             }
@@ -221,6 +227,9 @@ class TokenRepository {
     }
 
     // ==================== Utility ====================
+
+    private fun hashToken(token: String): String =
+        MessageDigest.getInstance("SHA-256").digest(token.toByteArray(Charsets.UTF_8)).toHexString()
 
     fun generateSecureToken(): String {
         return UUID.randomUUID().toString() + UUID.randomUUID().toString().replace("-", "")

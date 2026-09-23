@@ -20,6 +20,7 @@ object ErrorTypes {
     const val BAD_REQUEST = "BAD_REQUEST"
     const val INTERNAL_ERROR = "INTERNAL_ERROR"
     const val DATABASE_ERROR = "DATABASE_ERROR"
+    const val RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
 }
 
 /**

@@ -23,6 +23,15 @@ object EnvironmentConfig {
     }
 
     // JWT
+    /**
+     * Секреты-заглушки из репозитория: значение по умолчанию здесь и в application.yaml,
+     * и значение из docker-compose.yml и env.example. В production отклоняются оба.
+     */
+    val DEFAULT_JWT_SECRETS = setOf(
+        "your-256-bit-secret-key-change-in-production-please-make-it-long-enough",
+        "change_this_secret_key_in_production_to_random_string",
+    )
+
     val jwtSecret: String by lazy {
         getEnv("JWT_SECRET", "your-256-bit-secret-key-change-in-production-please-make-it-long-enough")
     }
@@ -106,7 +115,7 @@ object EnvironmentConfig {
         // Проверка критически важных переменных в production
         if (isProduction) {
             // JWT Secret
-            if (jwtSecret.contains("change-in-production") || jwtSecret.length < 32) {
+            if (jwtSecret in DEFAULT_JWT_SECRETS || jwtSecret.length < 32) {
                 errors.add("JWT_SECRET должен быть изменен и содержать минимум 32 символа в production")
             }
 

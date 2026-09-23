@@ -9,6 +9,8 @@ import com.learning.models.RegisterRequest
 import com.learning.repositories.UserRepository
 import com.learning.security.AuthService
 import com.learning.security.JwtService
+import com.learning.utils.AppException
+import com.learning.validation.PasswordPolicy
 import io.mockk.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -79,6 +81,7 @@ class AuthServiceTest {
 
         assertTrue(result.isFailure)
         assertEquals("Пользователь с таким email уже существует", result.exceptionOrNull()?.message)
+        assertInstanceOf(AppException.ConflictError::class.java, result.exceptionOrNull())
     }
 
     @Test
@@ -96,13 +99,14 @@ class AuthServiceTest {
 
         assertTrue(result.isFailure)
         assertEquals("Неверный формат email", result.exceptionOrNull()?.message)
+        assertInstanceOf(AppException.ValidationError::class.java, result.exceptionOrNull())
     }
 
     @Test
     fun `register should fail with short password`() {
         val request = RegisterRequest(
             email = "test@example.com",
-            password = "12345",
+            password = "Passw0r", // 7 символов: состав верный, длины не хватает
             firstName = "Иван",
             lastName = "Иванов"
         )
@@ -112,7 +116,8 @@ class AuthServiceTest {
         val result = authService.register(request)
 
         assertTrue(result.isFailure)
-        assertEquals("Пароль должен содержать минимум 6 символов", result.exceptionOrNull()?.message)
+        assertEquals(PasswordPolicy.MESSAGE, result.exceptionOrNull()?.message)
+        assertInstanceOf(AppException.ValidationError::class.java, result.exceptionOrNull())
     }
 
     @Test

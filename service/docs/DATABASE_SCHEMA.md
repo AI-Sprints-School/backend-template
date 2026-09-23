@@ -36,11 +36,11 @@ courses
 |---------|-----|----------|
 | id | UUID | PRIMARY KEY |
 | email | VARCHAR(255) | UNIQUE, NOT NULL |
-| password_hash | VARCHAR(255) | Хеш пароля (BCrypt), NULL для OAuth |
+| password_hash | VARCHAR(255) | Хеш пароля (BCrypt); NULL зарезервирован под OAuth — не реализовано |
 | first_name | VARCHAR(100) | Имя |
 | last_name | VARCHAR(100) | Фамилия |
 | profile_photo | VARCHAR(500) | URL фотографии профиля |
-| auth_provider | VARCHAR(20) | LOCAL, GOOGLE |
+| auth_provider | VARCHAR(20) | LOCAL; GOOGLE — не реализовано |
 | email_verified | BOOLEAN | Подтвержден ли email |
 | created_at | TIMESTAMP WITH TIME ZONE | Дата создания |
 | updated_at | TIMESTAMP WITH TIME ZONE | Дата обновления |
@@ -78,8 +78,9 @@ Refresh токены для JWT.
 |---------|-----|----------|
 | id | UUID | PRIMARY KEY |
 | user_id | UUID | FOREIGN KEY → users(id) |
-| token | VARCHAR(500) | UNIQUE токен |
+| token | VARCHAR(500) | UNIQUE; SHA-256 от refresh-токена в hex (64 символа), сам токен в базе не хранится |
 | expires_at | TIMESTAMP WITH TIME ZONE | Срок действия |
+| is_revoked | BOOLEAN | Отозван (выход, ротация, сброс пароля) |
 | created_at | TIMESTAMP WITH TIME ZONE | Дата создания |
 
 ---
@@ -475,7 +476,7 @@ Refresh токены для JWT.
 
 ### AuthProvider
 - `LOCAL` - локальная аутентификация
-- `GOOGLE` - OAuth через Google
+- `GOOGLE` - OAuth через Google — **не реализовано**, значение зарезервировано
 
 ### DifficultyLevel
 - `BEGINNER` - начальный уровень

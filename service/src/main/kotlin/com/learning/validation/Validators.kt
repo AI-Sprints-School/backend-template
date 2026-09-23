@@ -14,7 +14,11 @@ import io.ktor.server.plugins.requestvalidation.ValidationResult
  */
 object Validators {
 
-    private val EMAIL = Regex(".+@.+\\..+")
+    /**
+     * Формат почты — одна правда для валидаторов запросов и `AuthService.isValidEmail`:
+     * непустое имя, `@`, домен с точкой, после последней точки — не меньше двух латинских букв.
+     */
+    val EMAIL = Regex("[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}")
     private val PERSON_NAME = Regex("[a-zA-Zа-яА-ЯёЁ\\s-]+")
     private val LETTERS_AND_SPACES = Regex("[a-zA-Zа-яА-ЯёЁ\\s]+")
 
@@ -135,6 +139,23 @@ object Validators {
             maxLength(5000, "Ответ слишком длинный (макс. 5000 символов)")
         }
     }
+}
+
+/**
+ * Правило пароля — одно для регистрации (валидатор запроса и `AuthService.register`)
+ * и сброса пароля: от 8 до 100 символов, заглавная и строчная латинская буква, цифра.
+ */
+object PasswordPolicy {
+    const val MIN_LENGTH = 8
+    const val MAX_LENGTH = 100
+    const val MESSAGE = "Пароль должен содержать от 8 до 100 символов, заглавную и строчную латинскую букву и цифру"
+    val UPPER = Regex(".*[A-Z].*")
+    val LOWER = Regex(".*[a-z].*")
+    val DIGIT = Regex(".*[0-9].*")
+
+    fun isValid(password: String): Boolean =
+        password.length in MIN_LENGTH..MAX_LENGTH &&
+            UPPER.matches(password) && LOWER.matches(password) && DIGIT.matches(password)
 }
 
 /**

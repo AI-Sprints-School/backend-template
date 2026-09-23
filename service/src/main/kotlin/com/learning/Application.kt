@@ -22,6 +22,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.config.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
@@ -162,12 +163,16 @@ suspend fun Application.module() {
         allowMethod(HttpMethod.Options)
     }
 
+    // Лимит считается отдельно для каждого клиента (IP): без requestKey ключ один на весь
+    // сервис, и шесть входов разных людей за минуту закрывают вход всем.
     install(RateLimit) {
         register(RateLimitName("auth")) {
             rateLimiter(limit = config.int("rateLimit.auth", 5), refillPeriod = 1.minutes)
+            requestKey { call -> call.request.origin.remoteAddress }
         }
         register(RateLimitName("api")) {
             rateLimiter(limit = config.int("rateLimit.api", 100), refillPeriod = 1.minutes)
+            requestKey { call -> call.request.origin.remoteAddress }
         }
     }
 
@@ -209,9 +214,8 @@ suspend fun Application.module() {
         healthRoutes()
 
         route("/api/v1") {
-            rateLimit(RateLimitName("auth")) {
-                authRoutes(authService, tokenRepository, userRepository, emailService)
-            }
+            // Зоны лимита внутри: вход, регистрация, токены и сброс пароля — auth, /auth/me — api
+            authRoutes(authService, tokenRepository, userRepository, emailService)
 
             rateLimit(RateLimitName("api")) {
                 courseRoutes(courseService)

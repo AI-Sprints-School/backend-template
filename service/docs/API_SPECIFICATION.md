@@ -20,7 +20,7 @@
 
 ### 1.2 Аутентификация
 - Bearer Token (JWT)
-- OAuth 2.0 (Google)
+- ~~OAuth 2.0 (Google)~~ — **не реализовано** (см. §3.1.4)
 - Refresh Token механизм
 
 ---
@@ -32,11 +32,11 @@
 data class User(
     val id: UUID,
     val email: String,
-    val password: String?, // null для OAuth пользователей
+    val password: String?, // null зарезервирован под OAuth — OAuth не реализован
     val firstName: String,
     val lastName: String,
     val profilePhoto: String?,
-    val authProvider: AuthProvider, // LOCAL, GOOGLE
+    val authProvider: AuthProvider, // сейчас только LOCAL; GOOGLE — не реализовано
     val emailVerified: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant
@@ -301,21 +301,12 @@ Errors:
 403 Forbidden - email не подтвержден
 ```
 
-#### 3.1.4 OAuth Google
-```
-GET /api/v1/auth/oauth/google
-Response: 302 Redirect to Google OAuth
+#### 3.1.4 OAuth Google — не реализовано
 
-GET /api/v1/auth/oauth/google/callback?code={authCode}
-Response: 200 OK
-{
-    "accessToken": "jwt_token",
-    "refreshToken": "refresh_token",
-    "tokenType": "Bearer",
-    "expiresIn": 3600,
-    "user": { ... }
-}
-```
+Вход через Google в сервисе **не реализован**: маршрутов `/auth/oauth/google`
+нет ни в шаблоне, ни в эталоне, переменные `GOOGLE_*` сервис не читает.
+В таблице `users` остался только столбец `google_id` — задел под будущую
+доработку. Раздел сохранён, чтобы номера следующих разделов не сдвигались.
 
 #### 3.1.5 Обновление токена
 ```
@@ -1248,9 +1239,6 @@ services:
       SMTP_PORT: 587
       SMTP_USERNAME: your_email@gmail.com
       SMTP_PASSWORD: your_app_password
-      GOOGLE_CLIENT_ID: your_google_client_id
-      GOOGLE_CLIENT_SECRET: your_google_client_secret
-      GOOGLE_REDIRECT_URI: http://localhost:8080/api/v1/auth/oauth/google/callback
     depends_on:
       postgres:
         condition: service_healthy
@@ -1342,17 +1330,18 @@ backend-starter-course/
 - **Access Token**: срок действия 1 час
 - **Refresh Token**: срок действия 30 дней
 - Алгоритм: HS256
-- Хранение Refresh Token в Redis
+- Хранение Refresh Token — в таблице `refresh_tokens`, не сам токен, а его SHA-256
 
 ### 7.2 Пароли
 - Хеширование: BCrypt (cost factor 12)
-- Минимальная длина: 8 символов
-- Требования: минимум 1 цифра, 1 заглавная буква
+- Длина: от 8 до 100 символов
+- Требования: заглавная и строчная латинская буква, цифра — одно правило для регистрации и сброса пароля (`PasswordPolicy` в `Validators.kt`)
 
 ### 7.3 Rate Limiting
-- 100 запросов/минуту на IP для неавторизованных
-- 1000 запросов/минуту для авторизованных
-- 5 попыток входа за 15 минут
+- Лимит считается отдельно для каждого IP-адреса клиента
+- Зона `auth` — 5 запросов в минуту (`RATE_LIMIT_AUTH`): регистрация, вход, обновление токена, выход, подтверждение почты, сброс пароля
+- Зона `api` — 100 запросов в минуту (`RATE_LIMIT_API`): остальные маршруты, включая `GET /auth/me`
+- Превышение — `429 Too Many Requests` с заголовком `Retry-After` и телом ошибки `RATE_LIMIT_EXCEEDED` (§8)
 
 ### 7.4 CORS
 - Разрешенные origins настраиваются через переменные окружения
@@ -1363,28 +1352,33 @@ backend-starter-course/
 
 ## 8. Коды ошибок
 
+Тело любой ошибки — плоский объект `ErrorResponse`, одинаковый для всех
+маршрутов и для ответов плагинов (`StatusPages`, `RequestValidation`):
+
 ```json
 {
-    "error": {
-        "code": "ERROR_CODE",
-        "message": "Описание ошибки",
-        "details": {}
-    }
+    "error": "VALIDATION_ERROR",
+    "message": "Ошибка валидации данных",
+    "details": "email: Некорректный формат email; password: Пароль должен содержать минимум 8 символов"
 }
 ```
 
+- `error` — код ошибки из списка ниже, строка;
+- `message` — описание для человека;
+- `details` — необязательная строка с подробностями (для `VALIDATION_ERROR` —
+  все нарушения через `; `), в остальных ошибках отсутствует или `null`.
+
 ### Коды ошибок:
-- `UNAUTHORIZED` - 401: Требуется авторизация
-- `FORBIDDEN` - 403: Доступ запрещен
+- `VALIDATION_ERROR` - 400: Запрос не прошёл проверку формата (валидаторы, `AppException.ValidationError`)
+- `BAD_REQUEST` - 400: Некорректный запрос (неразбираемое тело, неверный UUID в пути, невалидный токен сброса)
+- `UNAUTHORIZED` - 401: Нет токена или токен недействителен (ответ плагина аутентификации)
+- `AUTHENTICATION_ERROR` - 401: Неверные учётные данные или refresh-токен
+- `AUTHORIZATION_ERROR` - 403: Нет нужной роли
 - `NOT_FOUND` - 404: Ресурс не найден
-- `VALIDATION_ERROR` - 400: Ошибка валидации
-- `DUPLICATE_EMAIL` - 409: Email уже зарегистрирован
-- `INVALID_CREDENTIALS` - 401: Неверные учетные данные
-- `EMAIL_NOT_VERIFIED` - 403: Email не подтвержден
-- `TOKEN_EXPIRED` - 401: Токен истек
-- `INVALID_TOKEN` - 401: Невалидный токен
-- `RATE_LIMIT_EXCEEDED` - 429: Превышен лимит запросов
-- `INTERNAL_SERVER_ERROR` - 500: Внутренняя ошибка сервера
+- `CONFLICT` - 409: Конфликт с данными, например почта уже зарегистрирована
+- `RATE_LIMIT_EXCEEDED` - 429: Превышен лимит запросов, есть заголовок `Retry-After`
+- `INTERNAL_ERROR` - 500: Внутренняя ошибка сервера
+- `DATABASE_ERROR` - 500: Ошибка базы данных
 
 ---
 
@@ -1415,11 +1409,6 @@ SMTP_PORT=587
 SMTP_USERNAME=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
 SMTP_FROM=noreply@learning-platform.com
-
-# OAuth Google
-GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:8080/api/v1/auth/oauth/google/callback
 
 # Server
 SERVER_PORT=8080

@@ -4,6 +4,9 @@ import at.favre.lib.crypto.bcrypt.BCrypt
 import com.learning.models.*
 import com.learning.repositories.TokenRepository
 import com.learning.repositories.UserRepository
+import com.learning.utils.AppException
+import com.learning.validation.PasswordPolicy
+import com.learning.validation.Validators
 import java.util.*
 import java.time.Instant
 
@@ -75,8 +78,5 @@ class AuthService(
     /**
      * Валидация email
      */
-    private fun isValidEmail(email: String): Boolean {
-        TODO("Глава 5, урок 19: проверка формата почты")
-    }
+    private fun isValidEmail(email: String): Boolean = TODO("Глава 5, урок 19: проверка формата почты")
 }
-

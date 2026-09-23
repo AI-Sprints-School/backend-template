@@ -306,6 +306,7 @@ object PasswordResetTokens : Table("password_reset_tokens") {
 object RefreshTokens : Table("refresh_tokens") {
     val id = javaUUID("id")
     val userId = reference("user_id", Users.id)
+    /** SHA-256 от refresh-токена в hex (64 символа), не сам токен — см. TokenRepository. */
     val token = varchar("token", 500).uniqueIndex()
     val expiresAt = timestamp("expires_at")
     val isRevoked = bool("is_revoked").default(false)
