@@ -4,13 +4,14 @@ import com.learning.*
 import com.learning.integration.DatabaseTestBase
 import com.learning.repositories.LessonRepository
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import org.junit.jupiter.api.Tag
 import java.util.*
 import kotlin.test.*
 
 /**
- * HTTP-тесты CRUD уроков. Чтение открыто всем, запись — только роли admin.
+ * HTTP-тесты CRUD уроков. Чтение открыто всем, кроме уроков черновика (автор курса и admin), запись — только роли admin.
  */
 @Tag("core")
 class LessonRoutesTest : DatabaseTestBase() {
@@ -76,6 +77,75 @@ class LessonRoutesTest : DatabaseTestBase() {
         assertTrue(contents.single().toString().contains("Роутинг — это дерево"))
     }
 
+    @Test
+    @Tag("chapter4")
+    fun `GET lessons should not list lessons of draft course`() = apiTest {
+        TestData.lesson(TestData.course("Опубликованный"), 1, title = "Открытый урок")
+        TestData.lesson(TestData.course("Черновик", published = false), 1, title = "Урок черновика")
+
+        val response = client.get("/api/v1/lessons")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val titles = response.json().arr("lessons").map { it.toString() }
+        assertEquals(1, titles.size)
+        assertTrue(titles.single().contains("Открытый урок"))
+    }
+
+    @Test
+    @Tag("chapter4")
+    fun `GET lesson of draft course without token should return 404`() = apiTest {
+        val lesson = TestData.lesson(TestData.course("Черновик", published = false), 1)
+
+        val response = client.get("/api/v1/lessons/${lesson.id}")
+
+        assertEquals(HttpStatusCode.NotFound, response.status, "Урок черновика отвечает как несуществующий урок")
+        assertEquals("NOT_FOUND", response.json().str("error"))
+    }
+
+    @Test
+    @Tag("chapter4")
+    fun `GET lesson content of draft course without token should return 404`() = apiTest {
+        val lesson = TestData.lesson(TestData.course("Черновик", published = false), 1, content = "Текст черновика")
+
+        val response = client.get("/api/v1/lessons/${lesson.id}/content")
+
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertFalse(response.bodyAsText().contains("Текст черновика"))
+    }
+
+    @Test
+    @Tag("chapter5")
+    fun `GET lesson of draft course as another student should return 404`() = apiTest {
+        val author = TestUsers.student()
+        val lesson = TestData.lesson(TestData.course("Черновик", published = false, authorId = author.user.id), 1)
+        val stranger = TestUsers.student()
+
+        val response = client.get("/api/v1/lessons/${lesson.id}") {
+            header(HttpHeaders.Authorization, stranger.bearer)
+        }
+
+        assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    @Test
+    @Tag("chapter5")
+    fun `GET lesson of draft course as admin should return 200`() = apiTest {
+        val lesson = TestData.lesson(TestData.course("Черновик", published = false), 1, content = "Текст черновика")
+        val admin = TestUsers.admin()
+
+        val byId = client.get("/api/v1/lessons/${lesson.id}") {
+            header(HttpHeaders.Authorization, admin.bearer)
+        }
+        val content = client.get("/api/v1/lessons/${lesson.id}/content") {
+            header(HttpHeaders.Authorization, admin.bearer)
+        }
+
+        assertEquals(HttpStatusCode.OK, byId.status)
+        assertEquals(lesson.id.toString(), byId.json().str("id"))
+        assertEquals(HttpStatusCode.OK, content.status)
+        assertTrue(content.bodyAsText().contains("Текст черновика"))
+    }
+
     // ==================== Создание ====================
 
     @Test
@@ -124,6 +194,22 @@ class LessonRoutesTest : DatabaseTestBase() {
         val stored = lessons.findByCourseId(course.id)
         assertEquals(listOf("Маршруты в Ktor"), stored.map { it.title })
         assertEquals(stored.single().id.toString(), response.json().str("id"))
+    }
+
+    @Test
+    @Tag("chapter5")
+    fun `POST lesson to draft course as admin should return 201`() = apiTest {
+        val draft = TestData.course("Черновик", published = false)
+        val admin = TestUsers.admin()
+
+        val response = client.post("/api/v1/lessons") {
+            header(HttpHeaders.Authorization, admin.bearer)
+            contentType(ContentType.Application.Json)
+            setBody(body(draft.id.toString()))
+        }
+
+        assertEquals(HttpStatusCode.Created, response.status, "Администратор видит черновик и наполняет его уроками")
+        assertEquals(1, lessons.findByCourseId(draft.id).size)
     }
 
     @Test

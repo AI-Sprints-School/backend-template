@@ -3,6 +3,7 @@ package com.learning.routes
 import com.learning.domain.models.Roles
 import com.learning.models.LessonContentsResponse
 import com.learning.models.LessonRequest
+import com.learning.models.LessonResponse
 import com.learning.models.LessonsResponse
 import com.learning.security.withRole
 import com.learning.services.CourseService
@@ -16,22 +17,27 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 /**
- * Уроки. Чтение — всем, запись — только администратору.
+ * Уроки. Чтение — всем, кроме уроков черновика: их видят автор курса и администратор,
+ * остальным 404. Запись — только администратору.
  * Отметка «урок пройден» — `POST /lessons/{id}/complete`, см. [userRoutes].
  */
 fun Route.lessonRoutes(lessonService: LessonService, courseService: CourseService) {
 
     route("/lessons") {
+        // Список, как и каталог курсов: только уроки опубликованных курсов
         get {
             TODO("Глава 4, урок 17: GET /lessons")
         }
 
-        get("/{id}") {
-            TODO("Глава 4, урок 17: GET /lessons/{id}")
-        }
+        // Урок черновика — 404, пока курс не виден зрителю (автор и admin — см. CourseService.canSeeDraft)
+        authenticate("auth-jwt", optional = true) {
+            get("/{id}") {
+                TODO("Глава 4, урок 17: GET /lessons/{id}")
+            }
 
-        get("/{id}/content") {
-            TODO("Глава 4, урок 17: GET /lessons/{id}/content")
+            get("/{id}/content") {
+                TODO("Глава 4, урок 17: GET /lessons/{id}/content")
+            }
         }
 
         // Запись — только администратор: без токена 401, без роли 403
@@ -55,3 +61,11 @@ fun Route.lessonRoutes(lessonService: LessonService, courseService: CourseServic
 
 internal fun io.ktor.server.application.ApplicationCall.lessonId(): String =
     uuidParameter("id", "Неверный ID урока")
+
+/** Урок, если он есть и его курс виден зрителю; иначе 404 — как несуществующий урок. */
+internal fun io.ktor.server.application.ApplicationCall.visibleLesson(
+    lessonService: LessonService,
+    courseService: CourseService
+): LessonResponse {
+    TODO("Глава 4, урок 17: урок, чей курс виден зрителю; иначе 404 «Урок не найден»")
+}

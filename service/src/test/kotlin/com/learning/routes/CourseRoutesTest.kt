@@ -104,6 +104,18 @@ class CourseRoutesTest : DatabaseTestBase() {
         assertTrue(lessons[1].contains("Второй"))
     }
 
+    @Test
+    @Tag("chapter4")
+    fun `GET draft course lessons without token should return 404`() = apiTest {
+        val draft = TestData.course("Черновик", published = false)
+        TestData.lesson(draft, order = 1)
+
+        val response = client.get("/api/v1/courses/${draft.id}/lessons")
+
+        assertEquals(HttpStatusCode.NotFound, response.status, "Уроки черновика не раскрывают, что курс существует")
+        assertEquals("NOT_FOUND", response.json().str("error"))
+    }
+
     // ==================== Черновики: автор и admin ====================
 
     @Test
@@ -133,6 +145,26 @@ class CourseRoutesTest : DatabaseTestBase() {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals(draft.id.toString(), response.json().str("id"))
+    }
+
+    @Test
+    @Tag("chapter5")
+    fun `GET draft course lessons as its author should return 200`() = apiTest {
+        val author = TestUsers.student()
+        val draft = TestData.course("Черновик", published = false, authorId = author.user.id)
+        TestData.lesson(draft, order = 1, title = "Урок черновика")
+        val stranger = TestUsers.student()
+
+        val own = client.get("/api/v1/courses/${draft.id}/lessons") {
+            header(HttpHeaders.Authorization, author.bearer)
+        }
+        val foreign = client.get("/api/v1/courses/${draft.id}/lessons") {
+            header(HttpHeaders.Authorization, stranger.bearer)
+        }
+
+        assertEquals(HttpStatusCode.OK, own.status)
+        assertTrue(own.json().arr("lessons").single().toString().contains("Урок черновика"))
+        assertEquals(HttpStatusCode.NotFound, foreign.status)
     }
 
     @Test
