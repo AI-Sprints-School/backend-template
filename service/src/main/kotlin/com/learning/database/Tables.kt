@@ -43,6 +43,7 @@ object Courses : Table("courses") {
     val difficulty = varchar("difficulty", 20) // beginner, intermediate, advanced
     val isPublished = bool("is_published").default(false)
     val lessonsCount = integer("lessons_count").default(0)
+    val authorId = javaUUID("author_id").nullable() // автор курса, миграция V3
     val createdAt = timestamp("created_at").default(Instant.now())
     val updatedAt = timestamp("updated_at").default(Instant.now())
 

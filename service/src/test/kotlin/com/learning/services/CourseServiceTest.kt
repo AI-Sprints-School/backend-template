@@ -111,6 +111,17 @@ class CourseServiceTest {
     }
 
     @Test
+    fun `getCourseById should return null for draft course`() {
+        val courseId = UUID.randomUUID()
+        val draft = createTestCourse(courseId, "Черновик", isPublished = false)
+        every { courseRepository.findById(courseId) } returns draft
+
+        val result = courseService.getCourseById(courseId.toString())
+
+        assertNull(result, "Черновик без пользователя не отдаётся — маршрут ответит 404")
+    }
+
+    @Test
     fun `getCourseById should throw exception for invalid UUID`() {
         assertThrows<IllegalArgumentException> {
             courseService.getCourseById("not-a-uuid")
@@ -199,7 +210,7 @@ class CourseServiceTest {
         )
 
         every {
-            courseRepository.createCourse(any(), any(), any(), any(), any(), any(), any(), any(), any())
+            courseRepository.createCourse(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
         } returns null
 
         assertThrows<Exception> {

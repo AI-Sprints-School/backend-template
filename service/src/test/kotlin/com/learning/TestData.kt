@@ -7,13 +7,14 @@ import com.learning.repositories.LessonRepository
 import io.ktor.client.statement.*
 import kotlinx.serialization.json.*
 import java.math.BigDecimal
+import java.util.UUID
 
 /** Курсы и уроки для тестов — прямо в базе, минуя HTTP. */
 object TestData {
     private val courses = CourseRepository()
     private val lessons = LessonRepository()
 
-    fun course(title: String = "Kotlin Basics", published: Boolean = true): Course =
+    fun course(title: String = "Kotlin Basics", published: Boolean = true, authorId: UUID? = null): Course =
         courses.createCourse(
             title = title,
             description = "Описание курса $title",
@@ -23,7 +24,8 @@ object TestData {
             originalPrice = null,
             duration = 120,
             difficulty = "beginner",
-            isPublished = published
+            isPublished = published,
+            authorId = authorId
         ) ?: error("Не удалось создать курс")
 
     fun lesson(course: Course, order: Int, title: String = "Урок $order", duration: Int = 15, content: String = "Текст урока $order"): Lesson =

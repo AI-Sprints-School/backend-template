@@ -22,7 +22,8 @@ class CourseRepository {
         originalPrice: BigDecimal?,
         duration: Int,
         difficulty: String,
-        isPublished: Boolean = false
+        isPublished: Boolean = false,
+        authorId: UUID? = null
     ): Course? {
         TODO("Глава 3, урок 12: CourseRepository.createCourse")
     }
@@ -87,6 +88,7 @@ class CourseRepository {
             difficulty = this[Courses.difficulty],
             isPublished = this[Courses.isPublished],
             lessonsCount = this[Courses.lessonsCount],
+            authorId = this[Courses.authorId],
             createdAt = this[Courses.createdAt],
             updatedAt = this[Courses.updatedAt]
         )

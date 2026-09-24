@@ -104,6 +104,8 @@ Refresh токены для JWT.
 | students_count | INT | Количество студентов |
 | price | DECIMAL(10,2) | Цена |
 | is_premium | BOOLEAN | Премиум курс |
+| is_published | BOOLEAN | Опубликован; `false` — черновик |
+| author_id | UUID | FOREIGN KEY → users(id), автор курса (миграция V3); `NULL`, если автор удалён |
 | created_at | TIMESTAMP WITH TIME ZONE | Дата создания |
 | updated_at | TIMESTAMP WITH TIME ZONE | Дата обновления |
 

@@ -1,6 +1,8 @@
 package com.learning.routes
 
 import com.learning.domain.models.Roles
+import com.learning.domain.models.Viewer
+import com.learning.security.JwtService
 import com.learning.models.*
 import com.learning.security.withRole
 import com.learning.services.CourseService
@@ -8,12 +10,14 @@ import com.learning.utils.AppException
 import com.learning.utils.safeExecute
 import io.ktor.http.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 /**
  * Курсы. Чтение — всем, запись — только администратору.
+ * Черновик по id видят только автор и администратор, остальным — 404, как несуществующий курс.
  *
  * Коды ответов: неверный UUID → 400, нет курса → 404, нет токена → 401,
  * нет роли admin → 403, ошибка валидации тела → 400 `VALIDATION_ERROR`.
@@ -26,8 +30,11 @@ fun Route.courseRoutes(courseService: CourseService) {
             TODO("Глава 4, урок 16: GET /courses — опубликованные курсы")
         }
 
-        get("/{id}") {
-            TODO("Глава 4, урок 16: GET /courses/{id}")
+        // Токен необязателен: без него — аноним, с ним сервис узнаёт автора и администратора
+        authenticate("auth-jwt", optional = true) {
+            get("/{id}") {
+                TODO("Глава 4, урок 16: GET /courses/{id}")
+            }
         }
 
         get("/{id}/lessons") {
@@ -51,6 +58,17 @@ fun Route.courseRoutes(courseService: CourseService) {
             }
         }
     }
+}
+
+/**
+ * Кто спрашивает: пользователь и роль из проверенного токена, без токена — `null`.
+ * Работает под `authenticate` — в том числе с `optional = true`.
+ */
+internal fun io.ktor.server.application.ApplicationCall.viewer(): Viewer? {
+    val payload = principal<JWTPrincipal>()?.payload ?: return null
+    val userId = payload.subject?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() } ?: return null
+    val role = payload.getClaim(JwtService.CLAIM_ROLE)?.asString() ?: return null
+    return Viewer(userId, role)
 }
 
 /** ID курса из пути; неверный UUID — 400, а не 500. */

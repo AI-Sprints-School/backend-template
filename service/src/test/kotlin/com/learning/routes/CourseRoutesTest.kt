@@ -13,6 +13,7 @@ import kotlin.test.*
 /**
  * HTTP-тесты CRUD курсов: приложение целиком через Ktor Test, база — Testcontainers.
  * Чтение открыто всем, запись — только роли admin (без токена 401, без роли 403).
+ * Черновик по id видят автор и admin; остальным — 404, как несуществующий курс.
  */
 @Tag("core")
 class CourseRoutesTest : DatabaseTestBase() {
@@ -70,6 +71,17 @@ class CourseRoutesTest : DatabaseTestBase() {
 
     @Test
     @Tag("chapter4")
+    fun `GET draft course by id without token should return 404`() = apiTest {
+        val draft = TestData.course("Черновик", published = false)
+
+        val response = client.get("/api/v1/courses/${draft.id}")
+
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertEquals("NOT_FOUND", response.json().str("error"))
+    }
+
+    @Test
+    @Tag("chapter4")
     fun `GET course by id should return 400 for invalid id`() = apiTest {
         val response = client.get("/api/v1/courses/not-a-uuid")
 
@@ -90,6 +102,84 @@ class CourseRoutesTest : DatabaseTestBase() {
         assertEquals(2, lessons.size)
         assertTrue(lessons[0].contains("Первый"))
         assertTrue(lessons[1].contains("Второй"))
+    }
+
+    // ==================== Черновики: автор и admin ====================
+
+    @Test
+    @Tag("chapter5")
+    fun `GET draft course by id as another student should return 404`() = apiTest {
+        val author = TestUsers.student()
+        val draft = TestData.course("Черновик", published = false, authorId = author.user.id)
+        val stranger = TestUsers.student()
+
+        val response = client.get("/api/v1/courses/${draft.id}") {
+            header(HttpHeaders.Authorization, stranger.bearer)
+        }
+
+        assertEquals(HttpStatusCode.NotFound, response.status, "Чужой черновик — 404, а не 403: существование не раскрывается")
+        assertEquals("NOT_FOUND", response.json().str("error"))
+    }
+
+    @Test
+    @Tag("chapter5")
+    fun `GET draft course by id as its author should return 200`() = apiTest {
+        val author = TestUsers.student()
+        val draft = TestData.course("Черновик", published = false, authorId = author.user.id)
+
+        val response = client.get("/api/v1/courses/${draft.id}") {
+            header(HttpHeaders.Authorization, author.bearer)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(draft.id.toString(), response.json().str("id"))
+    }
+
+    @Test
+    @Tag("chapter5")
+    fun `GET draft course by id as admin should return 200`() = apiTest {
+        val draft = TestData.course("Черновик", published = false, authorId = TestUsers.student().user.id)
+        val admin = TestUsers.admin()
+
+        val response = client.get("/api/v1/courses/${draft.id}") {
+            header(HttpHeaders.Authorization, admin.bearer)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(draft.id.toString(), response.json().str("id"))
+    }
+
+    @Test
+    @Tag("chapter5")
+    fun `GET courses with token should not list another author's draft`() = apiTest {
+        TestData.course("Опубликованный", published = true)
+        TestData.course("Чужой черновик", published = false, authorId = TestUsers.student().user.id)
+        val student = TestUsers.student()
+
+        val response = client.get("/api/v1/courses") {
+            header(HttpHeaders.Authorization, student.bearer)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val titles = response.json().arr("courses").map { it.toString() }
+        assertEquals(1, titles.size)
+        assertFalse(titles.single().contains("черновик"))
+    }
+
+    @Test
+    @Tag("chapter5")
+    fun `PUT draft course as admin should publish it`() = apiTest {
+        val draft = TestData.course("Черновик", published = false)
+        val admin = TestUsers.admin()
+
+        val response = client.put("/api/v1/courses/${draft.id}") {
+            header(HttpHeaders.Authorization, admin.bearer)
+            contentType(ContentType.Application.Json)
+            setBody(validBody.replace("\"price\": 1990.0", "\"price\": 1990.0,\n    \"isPublished\": true"))
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status, "Администратор видит черновик и может его опубликовать")
+        assertEquals(true, courses.findById(draft.id)?.isPublished)
     }
 
     // ==================== Создание ====================
@@ -139,6 +229,7 @@ class CourseRoutesTest : DatabaseTestBase() {
         assertNotNull(stored)
         assertEquals("Ktor с нуля", stored.title)
         assertFalse(stored.isPublished, "Новый курс по умолчанию — черновик")
+        assertEquals(admin.user.id, stored.authorId, "Автор курса — пользователь из токена")
     }
 
     @Test

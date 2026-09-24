@@ -38,3 +38,9 @@ object Roles {
     const val ADMIN = "admin"
     val ALL = setOf(STUDENT, ADMIN)
 }
+
+/**
+ * Кто делает запрос: пользователь и роль из проверенного access-токена.
+ * Анонимный запрос — `null` вместо [Viewer].
+ */
+data class Viewer(val userId: UUID, val role: String)

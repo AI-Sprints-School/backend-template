@@ -17,3 +17,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_user_progress_user_lesson
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_user_progress_user_course
     ON user_progress (user_id, course_id) WHERE progress_type = 'course';
+
+-- Автор курса: черновик (is_published = false) видят только автор и администратор.
+-- Курс переживает удаление автора — ссылка обнуляется, черновик остаётся администратору.
+ALTER TABLE courses
+    ADD COLUMN IF NOT EXISTS author_id UUID REFERENCES users(id) ON DELETE SET NULL;

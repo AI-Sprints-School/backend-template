@@ -16,6 +16,7 @@ data class Course(
     val difficulty: String, // beginner, intermediate, advanced
     val isPublished: Boolean = false,
     val lessonsCount: Int = 0,
+    val authorId: UUID? = null, // автор курса; черновик видят он и admin
     val createdAt: Instant = Instant.now(),
     val updatedAt: Instant = Instant.now()
 ) {

@@ -1,5 +1,8 @@
 package com.learning.services
 
+import com.learning.domain.models.Course
+import com.learning.domain.models.Roles
+import com.learning.domain.models.Viewer
 import com.learning.models.*
 import com.learning.repositories.CourseRepository
 import com.learning.repositories.LessonRepository
@@ -15,15 +18,26 @@ class CourseService(
         TODO("Глава 4, урок 15: CourseService.getAllCourses")
     }
     
-    fun getCourseById(id: String): CourseResponse? {
+    /**
+     * Курс по id. Черновик отдаётся только тому, кому [canSeeDraft] разрешает его видеть;
+     * остальным — `null`, как будто курса нет: маршрут ответит 404, а не 403,
+     * и не раскроет, что такой курс существует.
+     */
+    fun getCourseById(id: String, viewer: Viewer? = null): CourseResponse? {
         TODO("Глава 4, урок 15: CourseService.getCourseById")
     }
+
+    /**
+     * Может ли [viewer] видеть черновик [course]. До урока 23 — никто: пользователя ещё нет.
+     * Глава 5, урок 23: черновик видят автор курса (`course.authorId`) и роль admin.
+     */
+    fun canSeeDraft(course: Course, viewer: Viewer?): Boolean = false
     
     fun getCourseLessons(courseId: String): List<LessonResponse> {
         TODO("Глава 4, урок 15: CourseService.getCourseLessons")
     }
     
-    fun createCourse(request: CourseRequest): CourseResponse {
+    fun createCourse(request: CourseRequest, authorId: UUID? = null): CourseResponse {
         TODO("Глава 4, урок 15: CourseService.createCourse")
     }
     
