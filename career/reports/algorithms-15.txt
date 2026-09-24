@@ -1,0 +1,8 @@
+Урок 15 · career/algorithms · Kotlin 2.4.20
+Выполнено 3, зелёных 0, красных 3
+
+algorithms.l15.IntervalsAndSearchTest
+  [FAIL] compressToRanges сжимает подряд идущие числа: NotImplementedError: Урок 15: отсортируйте и одним проходом стройте диапазоны подряд идущих чисел
+  [FAIL] lowerBound находит первый индекс не меньше target: NotImplementedError: Урок 15: сужайте диапазон [lo, hi) пополам, а не идите линейным проходом
+  [FAIL] mergeIntervals объединяет пересекающиеся и смежные интервалы: NotImplementedError: Урок 15: отсортируйте по началу и идите слева направо, объединяя пересекающиеся
+Итог: красных 3 — урок не сдан

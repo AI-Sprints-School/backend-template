@@ -1,0 +1,9 @@
+Урок 13 · career/algorithms · Kotlin 2.4.20
+Выполнено 4, зелёных 2, красных 2
+
+algorithms.l13.ComplexityTest
+  [PASS] countDistinct считает уникальные числа
+  [FAIL] hasDuplicates находит повтор: NotImplementedError: Урок 13: перепишите без contains() в цикле — понадобится другая структура данн…
+  [FAIL] hasDuplicates укладывается в разумное время на большом входе: NotImplementedError: Урок 13: перепишите без contains() в цикле — понадобится другая структура данн…
+  [PASS] mostFrequent находит самое частое число
+Итог: красных 2 — урок не сдан
