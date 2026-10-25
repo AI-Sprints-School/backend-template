@@ -14,3 +14,6 @@ project(":career").projectDir = file("career/algorithms")
 
 // Модуль курса «Spring Boot на Kotlin» — сервис платформы на Spring Boot 4.1
 include("service-spring")
+
+// Модуль курса «Практикум по Java для Kotlin-разработчика» (java-praktikum)
+include("java-core")

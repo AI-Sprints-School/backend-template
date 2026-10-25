@@ -1,0 +1,71 @@
+# CI модуля java-core — курс «Практикум по Java для Kotlin-разработчика» — готовый, править не нужно.
+# 1. Номер урока берёт из имени ветки java-NN (NN — 05, 10, 12, 15, 17, 22, 24, 25, 28, 29;
+#    остальные уроки курса сдаются в песочнице платформы и в репозиторий не приходят).
+#    Ветки с другими именами (не java-…) этот workflow не проверяет.
+# 2. Прогоняет тесты урока и перегенерирует java-core/reports/tests-NN.txt.
+# 3. Падает, если закоммиченный отчёт не совпадает с прогоном в CI.
+# 4. Падает, если в отчёте есть красные тесты.
+name: java-core
+
+on:
+  pull_request:
+    paths: ["java-core/**"]
+
+jobs:
+  lesson:
+    if: startsWith(github.head_ref, 'java-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Номер урока из имени ветки
+        id: lesson
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if [[ "$BRANCH" =~ ^java-(05|10|12|15|17|22|24|25|28|29)$ ]]; then
+            echo "number=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "Урок ${BASH_REMATCH[1]}"
+          else
+            echo "::error::для урока с кодом ветка должна называться java-NN, NN из 05, 10, 12, 15, 17, 22, 24, 25, 28, 29 (сейчас: $BRANCH)"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Тесты и отчёт урока ${{ steps.lesson.outputs.number }}
+        run: ./gradlew :java-core:testReport -Plesson=${{ steps.lesson.outputs.number }}
+
+      - name: Отчёт в PR совпадает с прогоном CI
+        run: |
+          report=java-core/reports/tests-${{ steps.lesson.outputs.number }}.txt
+          if ! git diff --exit-code -- "$report"; then
+            echo "::error::Закоммиченный $report не совпадает с прогоном в CI (или его нет в ветке). Перегенерируйте: gradle :java-core:testReport -Plesson=${{ steps.lesson.outputs.number }}"
+            exit 1
+          fi
+          if [ -n "$(git ls-files --others --exclude-standard -- "$report")" ]; then
+            echo "::error::Отчёта $report нет в pull request. Запустите testReport и закоммитьте файл."
+            exit 1
+          fi
+
+      - name: Красных тестов нет
+        run: |
+          report=java-core/reports/tests-${{ steps.lesson.outputs.number }}.txt
+          cat "$report"
+          if ! grep -q "^Итог: все тесты урока зелёные$" "$report"; then
+            echo "::error::В $report есть красные тесты — урок не сдан"
+            exit 1
+          fi
+
+      - name: HTML-отчёт тестов
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: java-core-test-report
+          path: java-core/build/reports/tests/test
