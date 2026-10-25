@@ -1,0 +1,58 @@
+# Настройки сервиса на Spring. Профили: dev (граф бинов и учебные данные), test (тесты).
+# Секреты в репозиторий не кладут: значение берётся из переменной окружения.
+
+server:
+  # Порт Spring — 8081: на 8080 живёт Ktor-двойник (урок 1)
+  port: 8081
+
+spring:
+  application:
+    name: service-spring
+  datasource:
+    # База Spring — порт 5433, база learning_spring (docker compose в этой папке)
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/learning_spring}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres_password}
+  flyway:
+    # Миграции V1–V3 — те же, что у Ktor-версии: db/migration
+    locations: classpath:db/migration
+    # Учебные данные (db/seed) подключает только профиль dev. Без этой строки запуск без dev
+    # на базе, где уже побывал dev, падает: «applied migration not resolved locally».
+    ignore-migration-patterns: "repeatable:missing"
+
+# --- Места под настройки курса: заполняет студент -------------------------------------------
+
+# Урок 3: настройки JWT — секрет (ссылка на переменную окружения, без значения по умолчанию),
+# издатель, аудитория, срок жизни токена. Привязывает класс JwtProperties.
+# Ключи: jwt.secret, jwt.issuer, jwt.audience, jwt.access-token-ttl (Duration: 1h, 30m).
+# jwt:
+#   secret: ${JWT_SECRET}
+#   issuer: learning-platform
+#   audience: learning-platform-users
+#   access-token-ttl: 1h
+
+# Урок 4: показывать состав индикаторов в теле /health (db, diskSpace…) — учебная настройка,
+# в проде остаётся when-authorized.
+management:
+  endpoint:
+    health:
+      show-details: always
+
+# Урок 4: пробы Actuator — группы live и ready, пути /health/live, /health/ready, /health;
+# наружу открыт только health (в профиле dev добавлен beans — application-dev.yaml).
+# Пути контракта /health, /health/live, /health/ready (additional-path с «/» в Boot 4.1 не работает):
+#   management.endpoints.web.base-path: /                       (эндпоинт health — на /health)
+#   management.endpoints.web.path-mapping.beans: actuator/beans (граф бинов остаётся на /actuator/beans)
+#   management.endpoint.health.group.live: include livenessState; group.ready: include readinessState,db
+
+# Урок 5: виртуальные потоки.
+# spring:
+#   threads:
+#     virtual:
+#       enabled: true
+
+# Урок 8: схема приходит из Flyway, Hibernate её только проверяет.
+# spring:
+#   jpa:
+#     hibernate:
+#       ddl-auto: validate

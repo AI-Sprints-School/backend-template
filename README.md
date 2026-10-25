@@ -2,7 +2,8 @@
 
 Шаблон для курсов школы AI Sprints: **«Корутины и Flow на сервере»**
 (модуль `coroutines/`), **«REST-сервис на Ktor: API, база, авторизация,
-тесты»** (модуль `service/`) и карьерных курсов **«Карьерная подготовка
+тесты»** (модуль `service/`), **«Spring Boot на Kotlin»** (модуль
+`service-spring/`, README в папке модуля) и карьерных курсов **«Карьерная подготовка
 бэкенд-разработчика»** и «Карьерное сопровождение выпускника» (папка
 `career/` — код главы 4 и накопительные файлы остальных глав, подробности
 в `career/README.md`). В шаблоне уже есть сборка, база, миграции,
@@ -61,6 +62,9 @@ curl -i http://localhost:8080/health   # пока маршрут не напис
 | `service/docs/` | спецификация API и схема базы |
 | `service/reports/` | отчёты прогона по главам `tests-0N.txt` — коммитятся в pull request |
 | `service/scripts/perf/` | большой набор данных для главы 7 |
+| `service-spring/` | модуль курса «Spring Boot на Kotlin»: сервис на Spring Boot 4.1, база на 5433, сервис на 8081; подключение к своему репозиторию — `service-spring/README.md` |
+| `service-spring/reports/` | отчёты прогона по главам `tests-0N.txt` и отчёты уроков `lesson-NN.md` — коммитятся в pull request |
+| `.github/workflows/service-spring.yml` | CI сервиса на Spring: только pull request из веток `spring-NN`, сверка отчёта, ядро глав 1–N зелёное |
 | `defects/` | снимки сервиса с дефектами для главы 8; в шаблоне пусто, выдаются позже |
 | `.github/workflows/service.yml` | CI сервиса: прогон тестов главы, сверка отчёта, ядро глав 1–N зелёное |
 | `java-core/` | модуль курса «Практикум по Java для Kotlin-разработчика» (уроки 5, 10, 12, 15, 17, 22, 24, 25, 28, 29); подробности — `java-core/README.md` |
@@ -82,12 +86,15 @@ Workflow разнесены по модулям: изменения в `coroutin
    |---|---|---|
    | «Корутины и Flow на сервере» | `lesson-NN` | `lesson-01`, `lesson-02` |
    | «REST-сервис на Ktor» | `rest-NN` | `rest-01`, `rest-02` |
+   | «Spring Boot на Kotlin» | `spring-NN` | `spring-01`, `spring-02` |
    | «Карьерная подготовка бэкенд-разработчика» | `career-NN` | `career-01`, `career-13` |
    | «Карьерное сопровождение выпускника» | `career-support-NN` | `career-support-08`, `career-support-09` |
 
    CI корутин берёт номер урока из имени ветки и принимает только
    `lesson-NN`. CI сервиса имя ветки не читает: главу он берёт из
-   последнего отчёта `service/reports/tests-0N.txt`.
+   последнего отчёта `service/reports/tests-0N.txt`. CI `service-spring`
+   запускается только на ветках `spring-NN` и берёт главу из последнего
+   отчёта `service-spring/reports/tests-0N.txt`.
 2. Сделайте тесты урока зелёными и сгенерируйте отчёт прогона:
 
    ```bash
@@ -123,6 +130,7 @@ Workflow разнесены по модулям: изменения в `coroutin
 | Kotlin | 2.4.20 |
 | Gradle | 9.7.1 (wrapper в репозитории) |
 | Ktor | 3.5.2 |
+| Spring Boot | 4.1.2 (для `service-spring/`) |
 | Exposed | 1.5.0 |
 | kotlinx.coroutines | 1.11.0 |
 | PostgreSQL | 18 (в Docker) |
