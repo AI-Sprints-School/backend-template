@@ -40,7 +40,10 @@ management:
 
 # Урок 4: пробы Actuator — группы live и ready, пути /health/live, /health/ready, /health;
 # наружу открыт только health (в профиле dev добавлен beans — application-dev.yaml).
-# management.endpoint.health.group.live / ready / <сводная> с additional-path "server:/health/…".
+# Пути контракта /health, /health/live, /health/ready (additional-path с «/» в Boot 4.1 не работает):
+#   management.endpoints.web.base-path: /                       (эндпоинт health — на /health)
+#   management.endpoints.web.path-mapping.beans: actuator/beans (граф бинов остаётся на /actuator/beans)
+#   management.endpoint.health.group.live: include livenessState; group.ready: include readinessState,db
 
 # Урок 5: виртуальные потоки.
 # spring:

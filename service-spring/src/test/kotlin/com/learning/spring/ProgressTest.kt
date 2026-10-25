@@ -10,10 +10,11 @@ import kotlin.test.assertTrue
 
 /**
  * Урок 10: прогресс ученика — `POST /api/v1/lessons/{id}/complete` и `GET /api/v1/user/progress`.
- * Пользователя сервис узнаёт по `sub` токена (как у Ktor-версии).
+ * Пользователя сервис узнаёт по `sub` токена (как у Ktor-версии), поэтому тесты в главе 3: до Security
+ * пользователя в запросе нет (решение оркестратора, урок 10 пишет прогресс, зеленеет с урока 13).
  */
 @Tag("core")
-@Tag("chapter2")
+@Tag("chapter3")
 class ProgressTest : IntegrationTest() {
 
     @Test

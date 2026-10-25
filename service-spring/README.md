@@ -50,8 +50,8 @@ cd ..
 | Глава | Ядро (классы тестов) | Расширение |
 |---|---|---|
 | 1 | `BeansContextTest`, `JwtPropertiesBindingTest`, `HealthProbesTest` | — |
-| 2 | `CatalogRoutesTest`, `CatalogPagingTest`, `ValidationTest`, `SchemaValidationTest`, `ProgressTest` | остальные проверки в `ValidationTest` |
-| 3 | `AccessRulesTest`, `AuthFlowTest`, `TokenCheckTest`, `RolesAndDraftsTest` | refresh и logout, уроки черновика |
+| 2 | `CatalogRoutesTest`, `CatalogPagingTest`, `ValidationTest`, `SchemaValidationTest` | остальные проверки в `ValidationTest` |
+| 3 | `AccessRulesTest`, `AuthFlowTest`, `TokenCheckTest`, `RolesAndDraftsTest`, `ProgressTest` | refresh и logout, уроки черновика |
 | 4 | — (тесты пишет студент в `src/test/kotlin/com/learning/spring/student/`) | — |
 | 5 | `SlugGeneratorTest`, `ProgressReportServiceTest` | — |
 | 6 | полный прогон ядра, `tests-06.txt` | — |
