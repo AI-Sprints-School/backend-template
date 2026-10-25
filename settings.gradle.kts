@@ -11,3 +11,6 @@ include("coroutines")
 // файлы без кода (search-log.md, vacancies.md, mock/…) других глав курса.
 include("career")
 project(":career").projectDir = file("career/algorithms")
+
+// Модуль курса «Spring Boot на Kotlin» — сервис платформы на Spring Boot 4.1
+include("service-spring")

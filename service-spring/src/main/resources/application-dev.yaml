@@ -1,0 +1,12 @@
+# Профиль dev: spring.profiles.active=dev (README модуля).
+management:
+  endpoints:
+    web:
+      exposure:
+        # beans — граф бинов (урок 2); в основном профиле наружу открыт только health
+        include: health,beans
+
+spring:
+  flyway:
+    # Учебные данные для локального стенда: db/seed (повторяемая миграция R__sample_data.sql)
+    locations: classpath:db/migration,classpath:db/seed
