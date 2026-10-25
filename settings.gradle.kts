@@ -11,3 +11,6 @@ include("coroutines")
 // файлы без кода (search-log.md, vacancies.md, mock/…) других глав курса.
 include("career")
 project(":career").projectDir = file("career/algorithms")
+
+// Модуль курса «Практикум по Java для Kotlin-разработчика» (java-praktikum)
+include("java-core")
