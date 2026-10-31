@@ -1,0 +1,35 @@
+# Сервис достижений (глава 6). Порт 8082: 8081 — service-spring, 8080 — Ktor-двойник.
+# База — та же, что у service-spring (5433, learning_spring), но своя схема achievements со своей
+# историей Flyway: сервисы не читают таблицы друг друга. В проде у сервиса была бы своя база.
+server:
+  port: 8082
+
+spring:
+  application:
+    name: achievements-spring
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/learning_spring}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres_password}
+    hikari:
+      # Соединения сервиса работают в своей схеме: JPA и JdbcTemplate видят таблицы achievements без префикса
+      schema: achievements
+  flyway:
+    # Схему achievements Flyway создаёт сам; таблица истории — achievements.flyway_schema_history
+    schemas: achievements
+    default-schema: achievements
+    locations: classpath:db/migration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: achievements
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+# --- Места под настройки уроков 24–25: заполняет студент ---------------------------------------
+# Урок 24: консьюмер — группа achievements, десериализация JSON в LessonCompletedEvent
+#   (тип по умолчанию, без заголовков типа: пакет отправителя здесь другой).
+# Урок 25: ошибки — ErrorHandlingDeserializer поверх JSON-десериализатора, чтобы битый JSON
+#   дошёл до обработчика ошибок, а не остановил консьюмер.

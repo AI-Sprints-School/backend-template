@@ -56,3 +56,17 @@ management:
 #   jpa:
 #     hibernate:
 #       ddl-auto: validate
+
+# Урок 15: клиент OAuth 2.0 «keycloak» — вход через Keycloak (docker compose --profile oauth up -d).
+# Адреса провайдера заданы явно, без issuer-uri: с issuer-uri сервис на старте идёт к Keycloak
+# за метаданными и без запущенного Keycloak не стартует — ни тесты, ни уроки 1–14.
+# Тестовые значения (realm, клиент, секрет) — README модуля и keycloak/realm-learning.json.
+# Ключи: spring.security.oauth2.client.registration.keycloak.{client-id, client-secret, scope,
+#   authorization-grant-type, redirect-uri}; spring.security.oauth2.client.provider.keycloak.{authorization-uri,
+#   token-uri, jwk-set-uri, user-info-uri, user-name-attribute}.
+# Адреса realm: http://localhost:8180/realms/learning/protocol/openid-connect/{auth, token, certs, userinfo}
+
+# Урок 22: адрес брокера (docker compose --profile kafka up -d). В тестах его подменяет Testcontainers.
+# spring:
+#   kafka:
+#     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}

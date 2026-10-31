@@ -1,0 +1,49 @@
+{
+  "realm": "learning",
+  "enabled": true,
+  "displayName": "Платформа обучения — учебный realm",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "clients": [
+    {
+      "clientId": "service-spring",
+      "name": "service-spring (урок 15)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "service-spring-local-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:8081/login/oauth2/code/keycloak"],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "student",
+      "email": "student@learning.local",
+      "emailVerified": true,
+      "firstName": "Учебный",
+      "lastName": "Студент",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "student-local-pass", "temporary": false }]
+    },
+    {
+      "username": "unverified",
+      "email": "unverified@learning.local",
+      "emailVerified": false,
+      "firstName": "Неподтверждённая",
+      "lastName": "Почта",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "unverified-local-pass", "temporary": false }]
+    }
+  ]
+}
