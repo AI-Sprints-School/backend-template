@@ -134,3 +134,37 @@ include("achievements-spring")
 
 Закоммитьте в `main`: `git add service-spring achievements-spring .github settings.gradle.kts && git commit -m "Подключить service-spring"`.
 Ветки сдачи — `spring-NN`.
+
+## Как обновить уже подключённый модуль (урок 15, глава 6)
+
+Команду `git checkout template/main -- service-spring` **второй раз не запускайте**: она заменит ваш код
+уроков версией шаблона, а несохранённые правки пропадут без вопроса. Если модуль подключён до появления
+урока 15 и главы 6, заберите только новое — по путям:
+
+```bash
+git fetch template
+# 1. Новые файлы и файлы шаблона, которые вы не правите: берутся целиком
+git checkout template/main -- \
+  achievements-spring \
+  .github/workflows/service-spring.yml \
+  service-spring/docker-compose.yml \
+  service-spring/keycloak \
+  service-spring/README.md \
+  service-spring/src/main/resources/db/migration/V4__external_identity.sql \
+  service-spring/src/main/kotlin/com/learning/spring/auth/ExternalLoginService.kt \
+  service-spring/src/main/kotlin/com/learning/spring/events \
+  service-spring/src/test/kotlin/com/learning/spring/OAuthLoginTest.kt \
+  service-spring/src/test/kotlin/com/learning/spring/LessonEventPublishingTest.kt \
+  service-spring/src/test/kotlin/com/learning/spring/AfterCommitTest.kt \
+  service-spring/src/test/kotlin/com/learning/spring/support
+# 2. Сборку правили вы сами — берите изменения по кускам
+git checkout -p template/main -- service-spring/build.gradle.kts
+```
+
+На шаге 2 Git показывает каждый кусок отличий и спрашивает `y/n`. Отвечайте `y` на новые тестовые
+зависимости, задачу `TestReportTask` и регистрацию `testReport`, а также на закомментированные строки стартеров
+`oauth2-client` и `kafka`. Отвечайте `n` на куски, которые снова закомментировали бы стартеры, уже
+включённые вами на прошлых уроках. `application.yaml` из шаблона не берите: изменились в нём только
+подсказки-комментарии, а настройки уроков 15 и 22 даёт текст урока. Не забудьте строку
+`include("achievements-spring")` в своём `settings.gradle.kts`. Перед коммитом проверьте `git diff --staged`:
+в нём не должно быть удалений вашего кода из `src/main`.

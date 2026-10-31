@@ -3,15 +3,15 @@
 # 2. Прогоняет тесты и перегенерирует отчёт той же главы.
 # 3. Падает, если отчёт в PR не совпадает с прогоном в CI.
 # 4. Падает, если красный хотя бы один тест ядра глав 1–N.
-# Модуль корутин (coroutines/**) и сервис на Spring (service-spring/**) проверяются своими workflow — сюда их изменения не попадают.
+# Модуль корутин (coroutines/**) и сервисы на Spring (service-spring/**, achievements-spring/**) проверяются своими workflow — сюда их изменения не попадают.
 name: service
 
 on:
   push:
     branches: [main]
-    paths-ignore: ["coroutines/**", "service-spring/**"]
+    paths-ignore: ["coroutines/**", "service-spring/**", "achievements-spring/**"]
   pull_request:
-    paths-ignore: ["coroutines/**", "service-spring/**"]
+    paths-ignore: ["coroutines/**", "service-spring/**", "achievements-spring/**"]
 
 jobs:
   test:
