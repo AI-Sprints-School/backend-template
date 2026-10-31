@@ -2,11 +2,17 @@ package com.learning.achievements
 
 import com.learning.achievements.support.AchievementsTest
 import com.learning.achievements.support.TestEvents.Event
+import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.awaitility.kotlin.atMost
 import org.awaitility.kotlin.await
 import org.awaitility.kotlin.untilAsserted
+import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.kafka.core.ConsumerFactory
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
 import java.time.Duration
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -15,10 +21,24 @@ import kotlin.test.assertTrue
 /**
  * Урок 25: сбойная запись не стопорит очередь — после повторов она уходит в `lesson-completed-dlt`,
  * следующая запись той же партиции обрабатывается.
+ *
+ * До урока 25 класс пропускается: без `ErrorHandlingDeserializer` битый JSON не доходит до обработчика
+ * ошибок, консьюмер читает его снова и снова, лог растёт без конца, и прогон падает по памяти.
  */
 @Tag("core")
 @Tag("chapter6")
 class DeadLetterTest : AchievementsTest() {
+
+    @Autowired
+    private lateinit var consumerFactory: ConsumerFactory<*, *>
+
+    @BeforeEach
+    fun requireErrorHandlingDeserializer() {
+        val configured = consumerFactory.valueDeserializer is ErrorHandlingDeserializer<*> ||
+            consumerFactory.configurationProperties[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG].toString()
+                .contains(ErrorHandlingDeserializer::class.java.simpleName)
+        assumeTrue(configured) { "Урок 25: нет ErrorHandlingDeserializer в spring.kafka.consumer — тест пропущен" }
+    }
 
     @Test
     fun `broken json goes to the dead letter topic and the next record is processed`() {
