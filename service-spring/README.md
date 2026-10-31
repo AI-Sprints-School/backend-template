@@ -60,7 +60,7 @@ Realm, клиент и пользователи импортируются из 
 cd service-spring
 docker compose --profile kafka up -d     # база и брокер; Keycloak главе 6 не нужен
 docker exec -it spring_kafka /opt/kafka/bin/kafka-console-consumer.sh \
-  --bootstrap-server localhost:9092 --topic lesson-completed --from-beginning --property print.key=true --property print.partition=true
+  --bootstrap-server localhost:9092 --topic lesson-completed --from-beginning --formatter-property print.key=true --formatter-property print.partition=true
 ```
 
 Брокер — одна нода `apache/kafka:4.2.2` в режиме KRaft, память ограничена `KAFKA_HEAP_OPTS=-Xmx512m`.
