@@ -53,6 +53,14 @@ dependencies {
     // implementation("org.springframework.boot:spring-boot-starter-security")
     // implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 
+    // Урок 15: раскомментируйте — клиент OAuth 2.0 для входа через Keycloak (тянет за собой Security,
+    // поэтому до урока 11 включать нельзя)
+    // implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+
+    // Глава 6 (уроки 22–23): раскомментируйте на уроке 22 — Spring for Apache Kafka.
+    // До урока 22 стартер выключен: иначе каждый запуск сервиса и тестов ждал бы брокер.
+    // implementation("org.springframework.boot:spring-boot-starter-kafka")
+
     // Тесты: стартеры Boot 4 с суффиксом -test по технологиям
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
@@ -62,6 +70,12 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql:$testcontainers_version")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter:$testcontainers_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    // Глава 6: брокер в Testcontainers (тот же образ apache/kafka:4.2.2, что в Compose), клиент Kafka
+    // для чтения топика в тестах и ожидание асинхронного результата. Версии kafka-clients и
+    // Awaitility — из BOM Boot. Работают и до урока 22: тесты главы 6 читают топик сами.
+    testImplementation("org.testcontainers:testcontainers-kafka:$testcontainers_version")
+    testImplementation("org.apache.kafka:kafka-clients")
+    testImplementation("org.awaitility:awaitility-kotlin")
     // launcher — для слушателя тегов отчёта прогона (src/test/.../report/TagReportListener.kt)
     testImplementation("org.junit.platform:junit-platform-launcher")
 }
@@ -85,6 +99,7 @@ testlogger {
 // Готовая часть шаблона — править не нужно.
 // ./gradlew :service-spring:testReport -Pchapter=N  →  service-spring/reports/tests-0N.txt
 // Короткая выдержка (~1 400 знаков): итог, ядро глав 1–N, упавшие тесты ядра главы N.
+// С главы 6 в отчёт входят и тесты второго сервиса achievements-spring/ (один отчёт на оба модуля).
 // Отчёт детерминирован — без даты, коммита и версии JDK: CI перегенерирует его
 // и сверяет с закоммиченным (git diff --exit-code reports/).
 val reportChapter = providers.gradleProperty("chapter").map(String::toInt)
@@ -98,7 +113,7 @@ tasks.test {
 }
 
 abstract class TestReportTask : DefaultTask() {
-    @get:InputFile abstract val tags: RegularFileProperty
+    @get:InputFiles abstract val tags: ConfigurableFileCollection
     @get:Input abstract val chapter: Property<Int>
     @get:Input abstract val failOnCore: Property<Boolean>
     @get:OutputFile abstract val report: RegularFileProperty
@@ -111,7 +126,7 @@ abstract class TestReportTask : DefaultTask() {
             val passed get() = status == "PASS"
         }
         val n = chapter.get()
-        val rows = tags.get().asFile.readLines().filter { it.isNotBlank() }.map { line ->
+        val rows = tags.files.filter { it.exists() }.flatMap { it.readLines() }.filter { it.isNotBlank() }.map { line ->
             val (cls, name, tagList, status) = line.split('\t')
             Row(cls, name, tagList.split(',').filter(String::isNotBlank).toSet(), status)
         }.sortedWith(compareBy({ it.chapter ?: 99 }, { it.cls }, { it.name }))
@@ -161,7 +176,13 @@ tasks.register<TestReportTask>("testReport") {
     group = "verification"
     description = "Прогон тестов и короткий отчёт reports/tests-NN.txt; -Pchapter=N обязателен"
     dependsOn(tasks.test)
-    tags.set(tagsFile)
+    tags.from(tagsFile)
+    // Глава 6 и дальше: второй сервис прогоняется вместе с этим и попадает в тот же отчёт
+    val achievements = rootProject.findProject(":achievements-spring")
+    if (achievements != null && reportChapter.getOrElse(0) >= 6) {
+        dependsOn(":achievements-spring:test")
+        tags.from(achievements.layout.buildDirectory.file("test-results/tags.tsv"))
+    }
     chapter.set(reportChapter.orElse(providers.provider { throw GradleException("Укажите главу: -Pchapter=N") }))
     failOnCore.set(providers.gradleProperty("failOnCore").map(String::toBoolean).orElse(false))
     report.set(reportChapter.map { layout.projectDirectory.file("reports/tests-%02d.txt".format(it)) })

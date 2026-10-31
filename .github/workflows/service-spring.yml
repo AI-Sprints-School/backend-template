@@ -1,4 +1,4 @@
-# CI сервиса на Spring (service-spring/) — готовый, править не нужно.
+# CI сервиса на Spring (service-spring/ и второй сервис achievements-spring/ главы 6) — готовый, править не нужно.
 # Запускается на pull request из веток spring-NN (курс «Spring Boot на Kotlin»);
 # ветки rest-*, lesson-*, career-* его не запускают (имя ветки проверяет первый шаг).
 # 1. Находит последний закоммиченный отчёт service-spring/reports/tests-0N.txt.
@@ -11,9 +11,9 @@ name: service-spring
 on:
   push:
     branches: [main]
-    paths: ["service-spring/**", ".github/workflows/service-spring.yml"]
+    paths: ["service-spring/**", "achievements-spring/**", ".github/workflows/service-spring.yml"]
   pull_request:
-    paths: ["service-spring/**"]
+    paths: ["service-spring/**", "achievements-spring/**"]
 
 jobs:
   test:
@@ -44,13 +44,14 @@ jobs:
             echo "Последний отчёт: $last"
           fi
 
-      # Docker на ubuntu-latest есть — тесты поднимают PostgreSQL через Testcontainers.
+      # Docker на ubuntu-latest есть — тесты поднимают PostgreSQL и Kafka через Testcontainers.
+      # С главы 6 testReport сам прогоняет и achievements-spring: отчёт один на оба сервиса.
       # На main шаблона тесты красные по замыслу: сборка и прогон проходят, красные тесты
       # не валят workflow. В pull request без отчёта — красный: отчёт главы обязателен.
       - name: Тесты (отчёта ещё нет)
         if: steps.chapter.outputs.chapter == ''
         continue-on-error: ${{ github.event_name == 'push' }}
-        run: ./gradlew :service-spring:test -PjavaToolchain=25 --continue
+        run: ./gradlew :service-spring:test :achievements-spring:test -PjavaToolchain=25 --continue
 
       - name: Прогон и отчёт главы ${{ steps.chapter.outputs.chapter }}
         if: steps.chapter.outputs.chapter != ''
@@ -73,4 +74,6 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: test-report-spring
-          path: service-spring/build/reports/tests/test
+          path: |
+            service-spring/build/reports/tests/test
+            achievements-spring/build/reports/tests/test

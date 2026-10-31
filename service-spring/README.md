@@ -7,9 +7,10 @@ Kotlin 2.4.20 и JDK 25. Каркас с `TODO`, все тесты курса с
 |---|---|
 | Сервис Spring | `http://localhost:8081` (Ktor-двойник — 8080) |
 | База Spring | PostgreSQL 18, порт **5433**, база `learning_spring` (Ktor — 5432) |
-| Сервис в `docker-compose.yml` | `postgres` |
+| Сервисы в `docker-compose.yml` | `postgres`; `keycloak` (профиль `oauth`, порт 8180, урок 15); `kafka` (профиль `kafka`, порт 9092, глава 6) |
+| Второй сервис (глава 6) | `achievements-spring/` в корне репозитория, порт 8082 — свой README |
 | Главный класс | `com.learning.spring.Application` (`@SpringBootApplication`, `@ConfigurationPropertiesScan`) |
-| Миграции | Flyway `V1`–`V3`, как у Ktor-версии; учебные данные `db/seed` — только в профиле `dev` |
+| Миграции | Flyway `V1`–`V3`, как у Ktor-версии, и `V4` — только Spring (урок 15); учебные данные `db/seed` — только в профиле `dev` |
 
 ## Запуск
 
@@ -29,6 +30,43 @@ cd ..
 короче 32 знаков, например `local-dev-secret-at-least-32-chars!!`; задайте его в конфигурации запуска
 рядом с `SPRING_PROFILES_ACTIVE` и не коммитьте. В профиле `test` тестовое значение лежит в
 `application-test.yaml` (его создаёт урок 3).
+
+### Keycloak — урок 15
+
+```bash
+cd service-spring
+docker compose --profile oauth up -d     # база и Keycloak; первый старт — около минуты
+```
+
+Realm, клиент и пользователи импортируются из `keycloak/realm-learning.json` при старте контейнера.
+Значения ниже — **тестовые**, только для учебного Keycloak на своей машине; в настоящем провайдере
+секреты не коммитят.
+
+| Что | Тестовое значение |
+|---|---|
+| Консоль администратора | `http://localhost:8180/admin`, вход `admin` / `admin-local-pass` |
+| Realm | `learning` |
+| Клиент | `service-spring`, конфиденциальный, секрет `service-spring-local-secret` |
+| Адрес возврата клиента | `http://localhost:8081/login/oauth2/code/keycloak` |
+| Пользователь с подтверждённой почтой | `student` / `student-local-pass` (`student@learning.local`) |
+| Пользователь без подтверждения почты | `unverified` / `unverified-local-pass` (`unverified@learning.local`) |
+
+Регистрацию клиента в `application.yaml` задают явными адресами провайдера (подсказка — в самом
+файле), без `issuer-uri`: с ним сервис на старте обращается к Keycloak и без него не запускается.
+
+### Kafka — глава 6
+
+```bash
+cd service-spring
+docker compose --profile kafka up -d     # база и брокер; Keycloak главе 6 не нужен
+docker exec -it spring_kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 --topic lesson-completed --from-beginning --formatter-property print.key=true --formatter-property print.partition=true
+```
+
+Брокер — одна нода `apache/kafka:4.2.2` в режиме KRaft, память ограничена `KAFKA_HEAP_OPTS=-Xmx512m`.
+Сервисы на машине ходят на `localhost:9092`, контейнеры сети Compose — на `kafka:29092`.
+Стартер `spring-boot-starter-kafka` в `build.gradle.kts` закомментирован до урока 22. Тесты главы 6
+поднимают свой брокер в Testcontainers (тот же образ), запущенный Compose им не нужен.
 
 Если порт 5433 или 8081 занят, остановите чужой контейнер или сервис: порты нужны курсу как есть.
 
@@ -51,10 +89,13 @@ cd ..
 |---|---|---|
 | 1 | `BeansContextTest`, `JwtPropertiesBindingTest`, `HealthProbesTest` | — |
 | 2 | `CatalogRoutesTest`, `CatalogPagingTest`, `ValidationTest`, `SchemaValidationTest` | остальные проверки в `ValidationTest` |
-| 3 | `AccessRulesTest`, `AuthFlowTest`, `TokenCheckTest`, `RolesAndDraftsTest`, `ProgressTest` | refresh и logout, уроки черновика |
+| 3 | `AccessRulesTest`, `AuthFlowTest`, `TokenCheckTest`, `RolesAndDraftsTest`, `ProgressTest`; урок 15 — `OAuthLoginTest` | refresh и logout, уроки черновика |
 | 4 | — (тесты пишет студент в `src/test/kotlin/com/learning/spring/student/`) | — |
 | 5 | `SlugGeneratorTest`, `ProgressReportServiceTest` | — |
-| 6 | полный прогон ядра, `tests-06.txt` | — |
+| 6 | `LessonEventPublishingTest`, `AfterCommitTest`; в `achievements-spring/` — `AchievementConsumerTest`, `DeadLetterTest` (тест доставки пишет студент в `achievements-spring/src/test/kotlin/com/learning/achievements/student/`) | — |
+| 7 | полный прогон ядра, `tests-07.txt` | — |
+
+С `-Pchapter=6` и дальше `testReport` прогоняет и `achievements-spring` — отчёт один на оба сервиса.
 
 Тесты ходят в сервис по HTTP и в базу по JDBC (PostgreSQL в Testcontainers, нужен Docker), поэтому
 компилируются на чистом шаблоне. Маршруты — с префиксом `/api/v1`, как у Ktor-двойника; пробы — в корне.
@@ -66,6 +107,9 @@ cd ..
 - `catalog/` — `CourseService`, `LessonService`, `CourseRepository` и его заглушка `InMemoryCourseRepository`
   без аннотаций; `ManualWiring` — ручная сборка (урок 2 её удаляет).
 - `health/HealthStub.kt` — заглушка `/health` (урок 4 заменяет её Actuator).
+- `auth/ExternalLoginService.kt` — заглушка привязки учётки провайдера и класс `ExternalIdentity` (урок 15).
+- `events/LessonCompletedEvent.kt` — событие «урок пройден», контракт с `achievements-spring` (глава 6). Готово.
+- `keycloak/realm-learning.json` — учебный realm для Keycloak (урок 15). Готово.
 - `legacy/` (Java) — материал главы 5: `SlugGenerator`, `ProgressReportService`, записи `ProgressEntry` и `CourseProgress`.
 - `application.yaml` — порт, база, Flyway и закомментированные места под настройки уроков 3, 4, 5, 8.
 
@@ -77,7 +121,7 @@ cd ..
 ```bash
 git remote add template https://github.com/AI-Sprints-School/backend-template.git   # если ещё нет
 git fetch template
-git checkout template/main -- service-spring .github/workflows/service-spring.yml
+git checkout template/main -- service-spring achievements-spring .github/workflows/service-spring.yml
 ```
 
 В `settings.gradle.kts` своего репозитория добавьте **отдельной строкой** (файл из шаблона не копируйте — он затрёт
@@ -85,7 +129,42 @@ git checkout template/main -- service-spring .github/workflows/service-spring.ym
 
 ```kotlin
 include("service-spring")
+include("achievements-spring")
 ```
 
-Закоммитьте в `main`: `git add service-spring .github settings.gradle.kts && git commit -m "Подключить service-spring"`.
+Закоммитьте в `main`: `git add service-spring achievements-spring .github settings.gradle.kts && git commit -m "Подключить service-spring"`.
 Ветки сдачи — `spring-NN`.
+
+## Как обновить уже подключённый модуль (урок 15, глава 6)
+
+Команду `git checkout template/main -- service-spring` **второй раз не запускайте**: она заменит ваш код
+уроков версией шаблона, а несохранённые правки пропадут без вопроса. Если модуль подключён до появления
+урока 15 и главы 6, заберите только новое — по путям:
+
+```bash
+git fetch template
+# 1. Новые файлы и файлы шаблона, которые вы не правите: берутся целиком
+git checkout template/main -- \
+  achievements-spring \
+  .github/workflows/service-spring.yml \
+  service-spring/docker-compose.yml \
+  service-spring/keycloak \
+  service-spring/README.md \
+  service-spring/src/main/resources/db/migration/V4__external_identity.sql \
+  service-spring/src/main/kotlin/com/learning/spring/auth/ExternalLoginService.kt \
+  service-spring/src/main/kotlin/com/learning/spring/events \
+  service-spring/src/test/kotlin/com/learning/spring/OAuthLoginTest.kt \
+  service-spring/src/test/kotlin/com/learning/spring/LessonEventPublishingTest.kt \
+  service-spring/src/test/kotlin/com/learning/spring/AfterCommitTest.kt \
+  service-spring/src/test/kotlin/com/learning/spring/support
+# 2. Сборку правили вы сами — берите изменения по кускам
+git checkout -p template/main -- service-spring/build.gradle.kts
+```
+
+На шаге 2 Git показывает каждый кусок отличий и спрашивает `y/n`. Отвечайте `y` на новые тестовые
+зависимости, задачу `TestReportTask` и регистрацию `testReport`, а также на закомментированные строки стартеров
+`oauth2-client` и `kafka`. Отвечайте `n` на куски, которые снова закомментировали бы стартеры, уже
+включённые вами на прошлых уроках. `application.yaml` из шаблона не берите: изменились в нём только
+подсказки-комментарии, а настройки уроков 15 и 22 даёт текст урока. Не забудьте строку
+`include("achievements-spring")` в своём `settings.gradle.kts`. Перед коммитом проверьте `git diff --staged`:
+в нём не должно быть удалений вашего кода из `src/main`.
