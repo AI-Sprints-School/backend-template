@@ -112,9 +112,10 @@ class OAuthLoginTest : IntegrationTest() {
         val auth = externalLogin.login(identity)
 
         assertEquals(local.id.toString(), auth.user.id)
-        val row = jdbc.queryForMap("SELECT auth_provider, external_subject FROM users WHERE id = ?", local.id)
+        val row = jdbc.queryForMap("SELECT auth_provider, external_subject, password_hash FROM users WHERE id = ?", local.id)
         assertEquals("KEYCLOAK", row["auth_provider"])
         assertEquals(identity.subject, row["external_subject"])
+        assertNull(row["password_hash"], "Пароль, заданный до привязки, после привязки не работает")
     }
 
     private fun identity(email: String = "kc-${UUID.randomUUID()}@example.com", emailVerified: Boolean = true) = ExternalIdentity(
